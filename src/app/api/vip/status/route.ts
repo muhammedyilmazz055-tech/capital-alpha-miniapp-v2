@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 
 const BOT_TOKEN = process.env.BOT_TOKEN || "";
-const BOT_API_URL = process.env.BOT_API_URL || "http://localhost:8080";
+const VIP_CHANNEL_ID = process.env.VIP_CHANNEL_ID || "-1004379884084";
 
 function validateInitData(initData: string): { valid: boolean; user?: any } {
   try {
@@ -33,6 +33,28 @@ function validateInitData(initData: string): { valid: boolean; user?: any } {
   }
 }
 
+async function checkVipViaTelegram(userId: number): Promise<{ is_vip: boolean; status?: string }> {
+  // Check if user is a member of the VIP channel using Telegram Bot API
+  try {
+    const res = await fetch(
+      `https://api.telegram.org/bot${BOT_TOKEN}/getChatMember?chat_id=${VIP_CHANNEL_ID}&user_id=${userId}`,
+      { signal: AbortSignal.timeout(5000) }
+    );
+    const data = await res.json();
+    
+    if (!data.ok) {
+      return { is_vip: false };
+    }
+    
+    const memberStatus = data.result?.status;
+    // member, administrator, creator = active VIP
+    const isVip = ["member", "administrator", "creator"].includes(memberStatus);
+    return { is_vip: isVip, status: memberStatus };
+  } catch {
+    return { is_vip: false };
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { initData } = await request.json();
@@ -47,20 +69,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ is_vip: false, error: "Invalid initData" }, { status: 401 });
     }
     
-    // Call bot's internal API to check VIP status
-    const botRes = await fetch(`${BOT_API_URL}/api/internal/vip/status?user_id=${user.id}`, {
-      headers: { "Content-Type": "application/json" },
-      // Short timeout since it's local
-      signal: AbortSignal.timeout(3000),
+    // Check VIP channel membership via Telegram Bot API (works from any server)
+    const vipResult = await checkVipViaTelegram(user.id);
+    
+    return NextResponse.json({ 
+      is_vip: vipResult.is_vip,
+      user_id: user.id,
+      username: user.username,
+      channel_status: vipResult.status,
     });
-    
-    if (!botRes.ok) {
-      console.error("Bot API error:", await botRes.text());
-      return NextResponse.json({ is_vip: false, error: "Bot API unavailable" }, { status: 502 });
-    }
-    
-    const data = await botRes.json();
-    return NextResponse.json(data);
   } catch (error) {
     console.error("VIP status check error:", error);
     return NextResponse.json({ is_vip: false, error: "Server error" }, { status: 500 });
