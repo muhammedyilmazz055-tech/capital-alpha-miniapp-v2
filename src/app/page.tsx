@@ -94,7 +94,9 @@ export default function HomePage() {
   };
 
   const openTelegramLink = (url: string) => {
-    webAppRef.current?.openTelegramLink(url);
+    webAppRef.current?.openLink?.(url, { tryInstantView: true });
+    // Fallback for older SDK
+    webAppRef.current?.openTelegramLink?.(url);
   };
 
   // Haptic feedback helper
