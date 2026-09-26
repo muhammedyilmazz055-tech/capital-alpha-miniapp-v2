@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 
 const BOT_TOKEN = process.env.BOT_TOKEN || "";
+const BOT_API_URL = process.env.BOT_API_URL || "http://localhost:8080";
 
 function validateInitData(initData: string): { valid: boolean; user?: any } {
   try {
@@ -46,15 +47,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ is_vip: false, error: "Invalid initData" }, { status: 401 });
     }
     
-    // TODO: Check actual VIP status from database
-    // For now, return false - will connect to bot's database later
-    // This would require shared database or API call to bot
-    
-    return NextResponse.json({ 
-      is_vip: false, 
-      user_id: user.id,
-      username: user.username 
+    // Call bot's internal API to check VIP status
+    const botRes = await fetch(`${BOT_API_URL}/api/internal/vip/status?user_id=${user.id}`, {
+      headers: { "Content-Type": "application/json" },
+      // Short timeout since it's local
+      signal: AbortSignal.timeout(3000),
     });
+    
+    if (!botRes.ok) {
+      console.error("Bot API error:", await botRes.text());
+      return NextResponse.json({ is_vip: false, error: "Bot API unavailable" }, { status: 502 });
+    }
+    
+    const data = await botRes.json();
+    return NextResponse.json(data);
   } catch (error) {
     console.error("VIP status check error:", error);
     return NextResponse.json({ is_vip: false, error: "Server error" }, { status: 500 });
