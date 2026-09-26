@@ -5,6 +5,8 @@
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  background: var(--tg-theme-bg-color, #ffffff);
+  color: var(--tg-theme-text-color, #000000);
 }
 
 .loading {
@@ -14,14 +16,14 @@
   justify-content: center;
   min-height: 100vh;
   gap: 12px;
-  color: #666;
+  color: var(--tg-theme-hint-color, #999999);
 }
 
 .spinner {
   width: 32px;
   height: 32px;
-  border: 3px solid #e0e0e0;
-  border-top-color: #0088cc;
+  border: 3px solid var(--tg-theme-secondary-bg-color, #e0e0e0);
+  border-top-color: var(--tg-theme-link-color, #0088cc);
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
@@ -35,7 +37,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 8px 0 16px;
-  border-bottom: 1px solid #e8e8e8;
+  border-bottom: 1px solid var(--tg-theme-secondary-bg-color, #e8e8e8);
 }
 
 .logo {
@@ -44,7 +46,7 @@
   gap: 10px;
   font-size: 20px;
   font-weight: 700;
-  color: #0088cc;
+  color: var(--tg-theme-link-color, #0088cc);
 }
 
 .userInfo {
@@ -56,7 +58,7 @@
 
 .username {
   font-weight: 600;
-  color: #333;
+  color: var(--tg-theme-text-color, #333);
 }
 
 .premiumBadge {
@@ -69,12 +71,12 @@
 }
 
 .card {
-  background: white;
+  background: var(--tg-theme-secondary-bg-color, #ffffff);
   border-radius: 16px;
   padding: 20px;
   margin-bottom: 20px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-  border: 1px solid #f0f0f0;
+  border: 1px solid var(--tg-theme-secondary-bg-color, #f0f0f0);
 }
 
 .cardHeader {
@@ -88,11 +90,12 @@
   margin: 0;
   font-size: 18px;
   font-weight: 700;
+  color: var(--tg-theme-text-color, #333);
 }
 
 .badgeActive {
-  background: #e8f5e9;
-  color: #2e7d32;
+  background: var(--tg-theme-button-color, #0088cc);
+  color: var(--tg-theme-button-text-color, #ffffff);
   padding: 4px 12px;
   border-radius: 20px;
   font-size: 12px;
@@ -100,16 +103,17 @@
 }
 
 .badgeInactive {
-  background: #fff3e0;
-  color: #e65100;
+  background: var(--tg-theme-hint-color, #ff9800);
+  color: var(--tg-theme-button-text-color, #ffffff);
   padding: 4px 12px;
   border-radius: 20px;
   font-size: 12px;
   font-weight: 600;
+  opacity: 0.9;
 }
 
 .cardDesc {
-  color: #666;
+  color: var(--tg-theme-hint-color, #666);
   font-size: 14px;
   line-height: 1.5;
   margin-bottom: 16px;
@@ -117,8 +121,8 @@
 
 .btnPrimary {
   width: 100%;
-  background: linear-gradient(135deg, #0088cc, #006699);
-  color: white;
+  background: var(--tg-theme-button-color, #0088cc);
+  color: var(--tg-theme-button-text-color, #ffffff);
   border: none;
   padding: 14px 20px;
   border-radius: 12px;
@@ -135,19 +139,20 @@
 
 .btnSecondary {
   width: 100%;
-  background: white;
-  color: #0088cc;
-  border: 2px solid #0088cc;
+  background: transparent;
+  color: var(--tg-theme-link-color, #0088cc);
+  border: 2px solid var(--tg-theme-link-color, #0088cc);
   padding: 14px 20px;
   border-radius: 12px;
   font-size: 16px;
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.1s;
+  transition: background 0.1s, color 0.1s;
 }
 
-.btnSecondary:hover {
-  background: #f0f8ff;
+.btnSecondary:active {
+  background: var(--tg-theme-link-color, #0088cc);
+  color: var(--tg-theme-button-text-color, #ffffff);
 }
 
 .section {
@@ -157,7 +162,7 @@
 .sectionTitle {
   font-size: 16px;
   font-weight: 700;
-  color: #333;
+  color: var(--tg-theme-text-color, #333);
   margin-bottom: 12px;
 }
 
@@ -168,8 +173,8 @@
 }
 
 .actionCard {
-  background: white;
-  border: 1px solid #f0f0f0;
+  background: var(--tg-theme-secondary-bg-color, #ffffff);
+  border: 1px solid var(--tg-theme-secondary-bg-color, #f0f0f0);
   border-radius: 12px;
   padding: 16px 12px;
   display: flex;
@@ -177,12 +182,13 @@
   align-items: center;
   gap: 6px;
   cursor: pointer;
-  transition: border-color 0.1s, box-shadow 0.1s;
+  transition: border-color 0.1s, box-shadow 0.1s, transform 0.1s;
 }
 
 .actionCard:active {
-  border-color: #0088cc;
-  box-shadow: 0 2px 8px rgba(0,136,204,0.1);
+  border-color: var(--tg-theme-link-color, #0088cc);
+  box-shadow: 0 2px 8px rgba(0,136,204,0.15);
+  transform: scale(0.98);
 }
 
 .actionIcon {
@@ -192,13 +198,13 @@
 .actionCard span:last-child {
   font-size: 12px;
   font-weight: 500;
-  color: #333;
+  color: var(--tg-theme-text-color, #333);
   text-align: center;
 }
 
 .infoCard {
-  background: white;
-  border: 1px solid #f0f0f0;
+  background: var(--tg-theme-secondary-bg-color, #ffffff);
+  border: 1px solid var(--tg-theme-secondary-bg-color, #f0f0f0);
   border-radius: 12px;
   padding: 16px;
   cursor: default;
@@ -208,13 +214,13 @@
   margin: 0 0 8px;
   font-size: 14px;
   font-weight: 600;
-  color: #333;
+  color: var(--tg-theme-text-color, #333);
 }
 
 .infoCard p {
   margin: 0;
   font-size: 12px;
-  color: #666;
+  color: var(--tg-theme-hint-color, #666);
   line-height: 1.5;
 }
 
@@ -225,8 +231,8 @@
 }
 
 .stat {
-  background: white;
-  border: 1px solid #f0f0f0;
+  background: var(--tg-theme-secondary-bg-color, #ffffff);
+  border: 1px solid var(--tg-theme-secondary-bg-color, #f0f0f0);
   border-radius: 12px;
   padding: 16px 8px;
   text-align: center;
@@ -236,13 +242,13 @@
   display: block;
   font-size: 20px;
   font-weight: 700;
-  color: #0088cc;
+  color: var(--tg-theme-link-color, #0088cc);
   line-height: 1.2;
 }
 
 .statLabel {
   font-size: 10px;
-  color: #999;
+  color: var(--tg-theme-hint-color, #999);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -250,19 +256,38 @@
 .footer {
   margin-top: auto;
   padding-top: 20px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--tg-theme-secondary-bg-color, #f0f0f0);
   text-align: center;
-  color: #999;
+  color: var(--tg-theme-hint-color, #999);
   font-size: 11px;
   line-height: 1.8;
 }
 
 .links a {
-  color: #0088cc;
+  color: var(--tg-theme-link-color, #0088cc);
   text-decoration: none;
   margin: 0 4px;
 }
 
 .links a:hover {
   text-decoration: underline;
+}
+
+/* Responsive: 2 kolon mobilde */
+@media (max-width: 400px) {
+  .grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .statsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Safe area inset support for notched devices */
+@supports (padding: max(0px)) {
+  .container {
+    padding-left: max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
+    padding-bottom: max(40px, env(safe-area-inset-bottom));
+  }
 }

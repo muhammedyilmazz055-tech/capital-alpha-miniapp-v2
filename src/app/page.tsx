@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import dynamic from "next/dynamic";
 import styles from "./page.module.css";
 
 interface User {
@@ -21,6 +20,7 @@ export default function HomePage() {
   const [vipStatus, setVipStatus] = useState<"loading" | "active" | "inactive">("loading");
   const webAppRef = useRef<WebAppType | null>(null);
   const [webAppReady, setWebAppReady] = useState(false);
+  const [themeParams, setThemeParams] = useState<any>({});
 
   useEffect(() => {
     import("@twa-dev/sdk").then((mod) => {
@@ -28,18 +28,42 @@ export default function HomePage() {
       webAppRef.current = WebApp;
       setWebAppReady(true);
       
+      // Apply Telegram theme CSS variables
+      if (WebApp.themeParams) {
+        setThemeParams(WebApp.themeParams);
+        applyThemeParams(WebApp.themeParams);
+      }
+      
+      // Listen for theme changes
+      WebApp.onEvent("themeChanged", (params: any) => {
+        applyThemeParams(params);
+        setThemeParams(params);
+      });
+
       WebApp.ready();
       WebApp.expand();
+      
+      // Set header/background colors from theme
+      if (WebApp.setHeaderColor && themeParams.bg_color) {
+        WebApp.setHeaderColor(themeParams.bg_color);
+      }
+      if (WebApp.setBackgroundColor && themeParams.bg_color) {
+        WebApp.setBackgroundColor(themeParams.bg_color);
+      }
       
       if (WebApp.initDataUnsafe?.user) {
         setUser(WebApp.initDataUnsafe.user);
       }
       setInitData(WebApp.initData);
-      
-      WebApp.setHeaderColor("#0088cc");
-      WebApp.setBackgroundColor("#f5f5f5");
     });
   }, []);
+
+  const applyThemeParams = (params: Record<string, string>) => {
+    const root = document.documentElement;
+    Object.entries(params).forEach(([key, value]) => {
+      root.style.setProperty(`--tg-theme-${key.replace(/_/g, "-")}`, value);
+    });
+  };
 
   useEffect(() => {
     if (initData && webAppReady) {
@@ -66,10 +90,17 @@ export default function HomePage() {
   };
 
   const openMiniApp = () => {
+    // Navigate to VIP panel within mini app
   };
 
   const openTelegramLink = (url: string) => {
     webAppRef.current?.openTelegramLink(url);
+  };
+
+  // Haptic feedback helper
+  const haptic = (type: "light" | "medium" | "heavy" | "success" | "error" = "light") => {
+    webAppRef.current?.HapticFeedback?.impactOccurred?.(type);
+    webAppRef.current?.HapticFeedback?.notificationOccurred?.(type);
   };
 
   if (!user) {
@@ -104,18 +135,23 @@ export default function HomePage() {
           </span>
         </div>
         <p className={styles.cardDesc}>
-          {vipStatus === "active" 
+          {vipStatus === "active"
             ? "VIP kanala erişiminiz var. Özel alpha, trade ideas ve stratejilerden yararlanın."
-            : "VIP aboneliği ile özel kanala erişim, öncelikli alpha fırsatları ve gelişmiş araçlar kazanın."
-          }
+            : "VIP aboneliği ile özel kanala erişim, öncelikli alpha fırsatları ve gelişmiş araçlar kazanın."}
         </p>
         {vipStatus !== "active" && (
-          <button className={styles.btnPrimary} onClick={openVipPayment}>
+          <button 
+            className={styles.btnPrimary} 
+            onClick={() => { haptic("medium"); openVipPayment(); }}
+          >
             ⭐ VIP Satın Al (Telegram Stars)
           </button>
         )}
         {vipStatus === "active" && (
-          <button className={styles.btnSecondary} onClick={openMiniApp}>
+          <button 
+            className={styles.btnSecondary} 
+            onClick={() => { haptic("light"); openMiniApp(); }}
+          >
             📊 VIP Paneline Git
           </button>
         )}
@@ -124,27 +160,45 @@ export default function HomePage() {
       <section className={styles.section}>
         <h3 className={styles.sectionTitle}>⚡ Hızlı İşlemler</h3>
         <div className={styles.grid}>
-          <button className={styles.actionCard} onClick={() => openTelegramLink("https://t.me/CapitalAlphaBot?start=alpha")}>
+          <button 
+            className={styles.actionCard} 
+            onClick={() => { haptic("light"); openTelegramLink("https://t.me/CapitalAlphaBot?start=alpha"); }}
+          >
             <span className={styles.actionIcon}>📊</span>
             <span>Günlük Alpha</span>
           </button>
-          <button className={styles.actionCard} onClick={() => openTelegramLink("https://t.me/CapitalAlphaBot?start=leaderboard")}>
+          <button 
+            className={styles.actionCard} 
+            onClick={() => { haptic("light"); openTelegramLink("https://t.me/CapitalAlphaBot?start=leaderboard"); }}
+          >
             <span className={styles.actionIcon}>🏆</span>
             <span>Liderlik Tablosu</span>
           </button>
-          <button className={styles.actionCard} onClick={() => openTelegramLink("https://t.me/CapitalAlphaBot?start=points")}>
+          <button 
+            className={styles.actionCard} 
+            onClick={() => { haptic("light"); openTelegramLink("https://t.me/CapitalAlphaBot?start=points"); }}
+          >
             <span className={styles.actionIcon}>💰</span>
             <span>Puanlarım</span>
           </button>
-          <button className={styles.actionCard} onClick={() => openTelegramLink("https://t.me/CapitalAlphaBot?start=referral")}>
+          <button 
+            className={styles.actionCard} 
+            onClick={() => { haptic("light"); openTelegramLink("https://t.me/CapitalAlphaBot?start=referral"); }}
+          >
             <span className={styles.actionIcon}>👥</span>
             <span>Arkadaş Davet Et</span>
           </button>
-          <button className={styles.actionCard} onClick={() => openTelegramLink("https://t.me/CapitalAlphaBot?start=trade_idea")}>
+          <button 
+            className={styles.actionCard} 
+            onClick={() => { haptic("light"); openTelegramLink("https://t.me/CapitalAlphaBot?start=trade_idea"); }}
+          >
             <span className={styles.actionIcon}>📈</span>
             <span>Trade Idea Paylaş</span>
           </button>
-          <button className={styles.actionCard} onClick={() => openTelegramLink("https://t.me/CapitalAlphaBot?start=submit_alpha")}>
+          <button 
+            className={styles.actionCard} 
+            onClick={() => { haptic("light"); openTelegramLink("https://t.me/CapitalAlphaBot?start=submit_alpha"); }}
+          >
             <span className={styles.actionIcon}>📝</span>
             <span>Alpha Gönder</span>
           </button>
