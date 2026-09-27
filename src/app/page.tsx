@@ -277,6 +277,17 @@ export default function HomePage() {
   const navigate = useNavigation(webApp);
   const vipStatus = useVipStatus(initData, webAppReady);
 
+  // Hooks MUST be called before any conditional returns
+  const handleVipPurchase = useCallback(() => {
+    haptic("medium");
+    navigate("https://t.me/CapitalHQ_bot?start=vip");
+  }, [haptic, navigate]);
+
+  const handleVipPanel = useCallback(() => {
+    haptic("light");
+    // TODO: VIP panel navigation within mini app
+  }, [haptic]);
+
   if (!webAppReady) {
     return <LoadingScreen />;
   }
@@ -289,16 +300,6 @@ export default function HomePage() {
       />
     );
   }
-
-  const handleVipPurchase = useCallback(() => {
-    haptic("medium");
-    navigate("https://t.me/CapitalAlphaBot?start=vip");
-  }, [haptic, navigate]);
-
-  const handleVipPanel = useCallback(() => {
-    haptic("light");
-    // TODO: VIP panel navigation within mini app
-  }, [haptic]);
 
   const actions = [
     { icon: "📊", label: "Günlük Alpha", url: "https://t.me/CapitalAlphaBot?start=alpha" },
