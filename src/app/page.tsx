@@ -302,12 +302,12 @@ export default function HomePage() {
   }
 
   const actions = [
-    { icon: "📊", label: "Günlük Alpha", url: "https://t.me/CapitalAlphaBot?start=alpha" },
-    { icon: "🏆", label: "Liderlik Tablosu", url: "https://t.me/CapitalAlphaBot?start=leaderboard" },
-    { icon: "💰", label: "Puanlarım", url: "https://t.me/CapitalAlphaBot?start=points" },
-    { icon: "👥", label: "Arkadaş Davet Et", url: "https://t.me/CapitalAlphaBot?start=referral" },
-    { icon: "📈", label: "Trade Idea Paylaş", url: "https://t.me/CapitalAlphaBot?start=trade_idea" },
-    { icon: "📝", label: "Alpha Gönder", url: "https://t.me/CapitalAlphaBot?start=submit_alpha" },
+    { icon: "📊", label: "Günlük Alpha", url: "https://t.me/CapitalHQ_bot?start=alpha" },
+    { icon: "🏆", label: "Liderlik Tablosu", url: "https://t.me/CapitalHQ_bot?start=leaderboard" },
+    { icon: "💰", label: "Puanlarım", url: "https://t.me/CapitalHQ_bot?start=points" },
+    { icon: "👥", label: "Arkadaş Davet Et", url: "https://t.me/CapitalHQ_bot?start=referral" },
+    { icon: "📈", label: "Trade Idea Paylaş", url: "https://t.me/CapitalHQ_bot?start=trade_idea" },
+    { icon: "📝", label: "Alpha Gönder", url: "https://t.me/CapitalHQ_bot?start=submit_alpha" },
   ];
 
   return (
@@ -402,7 +402,7 @@ export default function HomePage() {
         <p className={styles.links}>
           <a href="https://t.me/CapitalAlphaClub" target="_blank" rel="noopener noreferrer">Kanal</a> •
           <a href="https://t.me/CapitalAlphaVIP" target="_blank" rel="noopener noreferrer">VIP</a> •
-          <a href="https://t.me/CapitalAlphaBot" target="_blank" rel="noopener noreferrer">Bot</a>
+          <a href="https://t.me/CapitalHQ_bot" target="_blank" rel="noopener noreferrer">Bot</a>
         </p>
       </footer>
     </div>
