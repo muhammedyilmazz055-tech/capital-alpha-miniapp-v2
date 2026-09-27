@@ -94,6 +94,7 @@ export default function HomePage() {
   };
 
   const openTelegramLink = (url: string) => {
+    console.log('Opening link:', url);
     webAppRef.current?.openLink?.(url, { tryInstantView: true });
     // Fallback for older SDK
     webAppRef.current?.openTelegramLink?.(url);
