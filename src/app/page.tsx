@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import styles from "./page.module.css";
 
-interface User {
+export interface TelegramUser {
   id: number;
   first_name: string;
   last_name?: string;
@@ -12,116 +12,308 @@ interface User {
   is_premium?: boolean;
 }
 
-type WebAppType = any;
+export interface ThemeParams {
+  [key: string]: string | undefined;
+  bg_color?: string;
+  text_color?: string;
+  hint_color?: string;
+  link_color?: string;
+  button_color?: string;
+  button_text_color?: string;
+  secondary_bg_color?: string;
+}
 
-export default function HomePage() {
-  const [user, setUser] = useState<User | null>(null);
-  const [initData, setInitData] = useState<string | null>(null);
-  const [vipStatus, setVipStatus] = useState<"loading" | "active" | "inactive">("loading");
-  const webAppRef = useRef<WebAppType | null>(null);
+export interface WebAppType {
+  ready: () => void;
+  expand: () => void;
+  close: () => void;
+  themeParams: ThemeParams;
+  onEvent: (event: string, callback: (params: ThemeParams) => void) => void;
+  offEvent: (event: string, callback: (params: ThemeParams) => void) => void;
+  initData: string;
+  initDataUnsafe: { user?: TelegramUser };
+  setHeaderColor: (color: string) => void;
+  setBackgroundColor: (color: string) => void;
+  openLink: (url: string, options?: { tryInstantView?: boolean }) => void;
+  openTelegramLink: (url: string) => void;
+  HapticFeedback: {
+    impactOccurred: (type: "light" | "medium" | "heavy" | "success" | "error") => void;
+    notificationOccurred: (type: "light" | "medium" | "heavy" | "success" | "error") => void;
+    selectionChanged: () => void;
+  };
+}
+
+export interface VipStatusResponse {
+  is_vip: boolean;
+  expires_at?: number;
+}
+
+type VipStatus = "loading" | "active" | "inactive";
+
+const API_BASE = "";
+
+function useTelegramWebApp() {
+  const [webApp, setWebApp] = useState<WebAppType | null>(null);
   const [webAppReady, setWebAppReady] = useState(false);
-  const [themeParams, setThemeParams] = useState<any>({});
+  const [themeParams, setThemeParams] = useState<ThemeParams>({});
+  const [user, setUser] = useState<TelegramUser | null>(null);
+  const [initData, setInitData] = useState<string | null>(null);
 
   useEffect(() => {
-    import("@twa-dev/sdk").then((mod) => {
-      const WebApp = mod.default;
-      webAppRef.current = WebApp;
-      setWebAppReady(true);
-      
-      // Apply Telegram theme CSS variables
-      if (WebApp.themeParams) {
-        setThemeParams(WebApp.themeParams);
-        applyThemeParams(WebApp.themeParams);
-      }
-      
-      // Listen for theme changes
-      WebApp.onEvent("themeChanged", (params: any) => {
-        applyThemeParams(params);
-        setThemeParams(params);
-      });
-
-      WebApp.ready();
-      WebApp.expand();
-      
-      // Set header/background colors from theme
-      if (WebApp.setHeaderColor && themeParams.bg_color) {
-        WebApp.setHeaderColor(themeParams.bg_color);
-      }
-      if (WebApp.setBackgroundColor && themeParams.bg_color) {
-        WebApp.setBackgroundColor(themeParams.bg_color);
-      }
-      
-      if (WebApp.initDataUnsafe?.user) {
-        setUser(WebApp.initDataUnsafe.user);
-      }
-      setInitData(WebApp.initData);
-    });
+    let mounted = true;
+    
+    import("@twa-dev/sdk")
+      .then((mod) => {
+        const WebApp = mod.default;
+        if (!mounted) return;
+        
+        setWebApp(WebApp as unknown as WebAppType);
+        setWebAppReady(true);
+        
+        if (WebApp.themeParams) {
+          const params: ThemeParams = WebApp.themeParams as unknown as ThemeParams;
+          setThemeParams(params);
+          applyThemeParams(params);
+        }
+        
+        const handleThemeChange = (params: ThemeParams) => {
+          applyThemeParams(params);
+          setThemeParams(params);
+        };
+        
+        WebApp.onEvent("themeChanged", handleThemeChange as any);
+        
+        WebApp.ready();
+        WebApp.expand();
+        
+        if (WebApp.setHeaderColor && WebApp.themeParams.bg_color) {
+          WebApp.setHeaderColor(WebApp.themeParams.bg_color);
+        }
+        if (WebApp.setBackgroundColor && WebApp.themeParams.bg_color) {
+          WebApp.setBackgroundColor(WebApp.themeParams.bg_color);
+        }
+        
+        if (WebApp.initDataUnsafe?.user) {
+          setUser(WebApp.initDataUnsafe.user);
+        }
+        setInitData(WebApp.initData);
+        
+        return () => {
+          WebApp.offEvent("themeChanged", handleThemeChange as any);
+        };
+      })
+      .catch(console.error);
+    
+    return () => { mounted = false; };
   }, []);
 
-  const applyThemeParams = (params: any) => {
-    const root = document.documentElement;
-    Object.entries(params).forEach(([key, value]) => {
-      if (typeof value === 'string') {
-        root.style.setProperty(`--tg-theme-${key.replace(/_/g, "-")}`, value);
-      }
-    });
-  };
+  return { webApp, webAppReady, themeParams, user, initData };
+}
+
+function applyThemeParams(params: ThemeParams) {
+  const root = document.documentElement;
+  Object.entries(params).forEach(([key, value]) => {
+    if (typeof value === "string") {
+      root.style.setProperty(`--tg-theme-${key.replace(/_/g, "-")}`, value);
+    }
+  });
+}
+
+function useHapticFeedback(webApp: WebAppType | null) {
+  return useCallback(
+    (type: "light" | "medium" | "heavy" | "success" | "error" = "light") => {
+      webApp?.HapticFeedback?.impactOccurred?.(type);
+      webApp?.HapticFeedback?.notificationOccurred?.(type);
+    },
+    [webApp]
+  );
+}
+
+function useNavigation(webApp: WebAppType | null) {
+  return useCallback(
+    (url: string) => {
+      console.log("[Navigation] Opening:", url);
+      webApp?.openLink?.(url, { tryInstantView: true });
+      webApp?.openTelegramLink?.(url);
+    },
+    [webApp]
+  );
+}
+
+function useVipStatus(initData: string | null, webAppReady: boolean) {
+  const [vipStatus, setVipStatus] = useState<VipStatus>("loading");
 
   useEffect(() => {
-    if (initData && webAppReady) {
-      checkVipStatus();
+    if (!initData || !webAppReady) return;
+    
+    let mounted = true;
+    
+    async function check() {
+      try {
+        const res = await fetch(`${API_BASE}/api/vip/status`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ initData }),
+        });
+        const data: VipStatusResponse = await res.json();
+        if (mounted) setVipStatus(data.is_vip ? "active" : "inactive");
+      } catch {
+        if (mounted) setVipStatus("inactive");
+      }
     }
+    
+    check();
+    return () => { mounted = false; };
   }, [initData, webAppReady]);
 
-  const checkVipStatus = async () => {
-    try {
-      const res = await fetch(`/api/vip/status`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ initData }),
-      });
-      const data = await res.json();
-      setVipStatus(data.is_vip ? "active" : "inactive");
-    } catch {
-      setVipStatus("inactive");
-    }
-  };
+  return vipStatus;
+}
 
-  const openVipPayment = () => {
-    webAppRef.current?.openTelegramLink("https://t.me/CapitalAlphaBot?start=vip");
-  };
+function Button({
+  children,
+  variant = "primary",
+  size = "md",
+  onClick,
+  disabled = false,
+  loading = false,
+  className = "",
+  ...props
+}: {
+  children: React.ReactNode;
+  variant?: "primary" | "secondary" | "ghost";
+  size?: "sm" | "md" | "lg";
+  onClick?: () => void;
+  disabled?: boolean;
+  loading?: boolean;
+  className?: string;
+}) {
+  const baseStyles = [
+    styles.btn,
+    styles[variant],
+    styles[size],
+    disabled || loading ? styles.disabled : "",
+    className,
+  ]
+    .filter(Boolean)
+    .join(" ");
 
-  const openMiniApp = () => {
-    // Navigate to VIP panel within mini app
-  };
+  return (
+    <button
+      className={baseStyles}
+      onClick={onClick}
+      disabled={disabled || loading}
+      {...props}
+    >
+      {loading && <span className={styles.spinner} />}
+      <span className={styles.btnText}>{children}</span>
+    </button>
+  );
+}
 
-  const openTelegramLink = (url: string) => {
-    console.log('Opening link:', url);
-    webAppRef.current?.openLink?.(url, { tryInstantView: true });
-    // Fallback for older SDK
-    webAppRef.current?.openTelegramLink?.(url);
-  };
+function ActionCard({
+  icon,
+  label,
+  onClick,
+  disabled = false,
+}: {
+  icon: string;
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      className={`${styles.actionCard} ${disabled ? styles.disabled : ""}`}
+      onClick={onClick}
+      disabled={disabled}
+    >
+      <span className={styles.actionIcon}>{icon}</span>
+      <span className={styles.actionLabel}>{label}</span>
+    </button>
+  );
+}
 
-  // Haptic feedback helper
-  const haptic = (type: "light" | "medium" | "heavy" | "success" | "error" = "light") => {
-    webAppRef.current?.HapticFeedback?.impactOccurred?.(type);
-    webAppRef.current?.HapticFeedback?.notificationOccurred?.(type);
-  };
+function InfoCard({ icon, title, description }: { icon: string; title: string; description: string }) {
+  return (
+    <div className={styles.infoCard}>
+      <h4>{icon} {title}</h4>
+      <p>{description}</p>
+    </div>
+  );
+}
+
+function StatCard({ value, label }: { value: string; label: string }) {
+  return (
+    <div className={styles.stat}>
+      <span className={styles.statValue}>{value}</span>
+      <span className={styles.statLabel}>{label}</span>
+    </div>
+  );
+}
+
+function LoadingScreen() {
+  return (
+    <div className={styles.loading} role="status" aria-label="Yükleniyor">
+      <div className={styles.spinner} />
+      <p>Yükleniyor...</p>
+    </div>
+  );
+}
+
+function ErrorScreen({ message, onRetry }: { message: string; onRetry: () => void }) {
+  return (
+    <div className={styles.error}>
+      <p>⚠️ {message}</p>
+      <Button variant="primary" onClick={onRetry}>
+        Tekrar Dene
+      </Button>
+    </div>
+  );
+}
+
+export default function HomePage() {
+  const { webApp, webAppReady, themeParams, user, initData } = useTelegramWebApp();
+  const haptic = useHapticFeedback(webApp);
+  const navigate = useNavigation(webApp);
+  const vipStatus = useVipStatus(initData, webAppReady);
+
+  if (!webAppReady) {
+    return <LoadingScreen />;
+  }
 
   if (!user) {
     return (
-      <div className={styles.loading}>
-        <div className={styles.spinner}></div>
-        <p>Yükleniyor...</p>
-      </div>
+      <ErrorScreen
+        message="Telegram kullanıcı bilgisi alınamadı. Uygulamayı bot üzerinden açın."
+        onRetry={() => webApp?.ready()}
+      />
     );
   }
+
+  const handleVipPurchase = useCallback(() => {
+    haptic("medium");
+    navigate("https://t.me/CapitalAlphaBot?start=vip");
+  }, [haptic, navigate]);
+
+  const handleVipPanel = useCallback(() => {
+    haptic("light");
+    // TODO: VIP panel navigation within mini app
+  }, [haptic]);
+
+  const actions = [
+    { icon: "📊", label: "Günlük Alpha", url: "https://t.me/CapitalAlphaBot?start=alpha" },
+    { icon: "🏆", label: "Liderlik Tablosu", url: "https://t.me/CapitalAlphaBot?start=leaderboard" },
+    { icon: "💰", label: "Puanlarım", url: "https://t.me/CapitalAlphaBot?start=points" },
+    { icon: "👥", label: "Arkadaş Davet Et", url: "https://t.me/CapitalAlphaBot?start=referral" },
+    { icon: "📈", label: "Trade Idea Paylaş", url: "https://t.me/CapitalAlphaBot?start=trade_idea" },
+    { icon: "📝", label: "Alpha Gönder", url: "https://t.me/CapitalAlphaBot?start=submit_alpha" },
+  ];
 
   return (
     <div className={styles.container}>
       <header className={styles.header}>
         <div className={styles.logo}>
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
             <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
           </svg>
           <span>Capital Alpha</span>
@@ -132,9 +324,9 @@ export default function HomePage() {
         </div>
       </header>
 
-      <section className={styles.card}>
+      <section className={styles.card} aria-labelledby="vip-status">
         <div className={styles.cardHeader}>
-          <h2>💎 VIP Durumu</h2>
+          <h2 id="vip-status">💎 VIP Durumu</h2>
           <span className={vipStatus === "active" ? styles.badgeActive : styles.badgeInactive}>
             {vipStatus === "active" ? "AKTİF ✅" : vipStatus === "inactive" ? "PASİF" : "Yükleniyor..."}
           </span>
@@ -145,108 +337,62 @@ export default function HomePage() {
             : "VIP aboneliği ile özel kanala erişim, öncelikli alpha fırsatları ve gelişmiş araçlar kazanın."}
         </p>
         {vipStatus !== "active" && (
-          <button 
-            className={styles.btnPrimary} 
-            onClick={() => { haptic("medium"); openVipPayment(); }}
-          >
+          <Button variant="primary" size="lg" onClick={handleVipPurchase}>
             ⭐ VIP Satın Al (Telegram Stars)
-          </button>
+          </Button>
         )}
         {vipStatus === "active" && (
-          <button 
-            className={styles.btnSecondary} 
-            onClick={() => { haptic("light"); openMiniApp(); }}
-          >
+          <Button variant="secondary" size="lg" onClick={handleVipPanel}>
             📊 VIP Paneline Git
-          </button>
+          </Button>
         )}
       </section>
 
-      <section className={styles.section}>
-        <h3 className={styles.sectionTitle}>⚡ Hızlı İşlemler</h3>
-        <div className={styles.grid}>
-          <button 
-            className={styles.actionCard} 
-            onClick={() => { haptic("light"); openTelegramLink("https://t.me/CapitalAlphaBot?start=alpha"); }}
-          >
-            <span className={styles.actionIcon}>📊</span>
-            <span>Günlük Alpha</span>
-          </button>
-          <button 
-            className={styles.actionCard} 
-            onClick={() => { haptic("light"); openTelegramLink("https://t.me/CapitalAlphaBot?start=leaderboard"); }}
-          >
-            <span className={styles.actionIcon}>🏆</span>
-            <span>Liderlik Tablosu</span>
-          </button>
-          <button 
-            className={styles.actionCard} 
-            onClick={() => { haptic("light"); openTelegramLink("https://t.me/CapitalAlphaBot?start=points"); }}
-          >
-            <span className={styles.actionIcon}>💰</span>
-            <span>Puanlarım</span>
-          </button>
-          <button 
-            className={styles.actionCard} 
-            onClick={() => { haptic("light"); openTelegramLink("https://t.me/CapitalAlphaBot?start=referral"); }}
-          >
-            <span className={styles.actionIcon}>👥</span>
-            <span>Arkadaş Davet Et</span>
-          </button>
-          <button 
-            className={styles.actionCard} 
-            onClick={() => { haptic("light"); openTelegramLink("https://t.me/CapitalAlphaBot?start=trade_idea"); }}
-          >
-            <span className={styles.actionIcon}>📈</span>
-            <span>Trade Idea Paylaş</span>
-          </button>
-          <button 
-            className={styles.actionCard} 
-            onClick={() => { haptic("light"); openTelegramLink("https://t.me/CapitalAlphaBot?start=submit_alpha"); }}
-          >
-            <span className={styles.actionIcon}>📝</span>
-            <span>Alpha Gönder</span>
-          </button>
+      <section className={styles.section} aria-labelledby="quick-actions">
+        <h3 className={styles.sectionTitle} id="quick-actions">⚡ Hızlı İşlemler</h3>
+        <div className={styles.grid} role="list">
+          {actions.map((action) => (
+            <ActionCard
+              key={action.url}
+              icon={action.icon}
+              label={action.label}
+              onClick={() => {
+                haptic("light");
+                navigate(action.url);
+              }}
+            />
+          ))}
         </div>
       </section>
 
-      <section className={styles.section}>
-        <h3 className={styles.sectionTitle}>🎓 Stratejiler</h3>
-        <div className={styles.grid}>
-          <div className={styles.infoCard}>
-            <h4>💰 Funding Rate Arbitraj</h4>
-            <p>Perpetual futures'ta funding fee toplayarak risksiz getiri. Yıllık %5-15 APR.</p>
-          </div>
-          <div className={styles.infoCard}>
-            <h4>📈 Basis Trade (Cash & Carry)</h4>
-            <p>Futures-spot spread'ini kapatarak delta-nötr pozisyon. Yıllık %4-12 APR.</p>
-          </div>
-          <div className={styles.infoCard}>
-            <h4>🔄 DCA (Dollar Cost Averaging)</h4>
-            <p>Sabit aralıklarla alım yaparak ortalama maliyeti düşür. Otomatik bot desteği.</p>
-          </div>
+      <section className={styles.section} aria-labelledby="strategies">
+        <h3 className={styles.sectionTitle} id="strategies">🎓 Stratejiler</h3>
+        <div className={styles.grid} role="list">
+          <InfoCard
+            icon="💰"
+            title="Funding Rate Arbitraj"
+            description="Perpetual futures'ta funding fee toplayarak risksiz getiri. Yıllık %5-15 APR."
+          />
+          <InfoCard
+            icon="📈"
+            title="Basis Trade (Cash & Carry)"
+            description="Futures-spot spread'ini kapatarak delta-nötr pozisyon. Yıllık %4-12 APR."
+          />
+          <InfoCard
+            icon="🔄"
+            title="DCA (Dollar Cost Averaging)"
+            description="Sabit aralıklarla alım yaparak ortalama maliyeti düşür. Otomatik bot desteği."
+          />
         </div>
       </section>
 
-      <section className={styles.section}>
-        <h3 className={styles.sectionTitle}>👥 Topluluk</h3>
-        <div className={styles.statsGrid}>
-          <div className={styles.stat}>
-            <span className={styles.statValue}>1,247</span>
-            <span className={styles.statLabel}>Aktif Üye</span>
-          </div>
-          <div className={styles.stat}>
-            <span className={styles.statValue}>342</span>
-            <span className={styles.statLabel}>Paylaşılan Alpha</span>
-          </div>
-          <div className={styles.stat}>
-            <span className={styles.statValue}>89</span>
-            <span className={styles.statLabel}>Trade Ideas</span>
-          </div>
-          <div className={styles.stat}>
-            <span className={styles.statValue}>12.5%</span>
-            <span className={styles.statLabel}>Ort. APR (Funding)</span>
-          </div>
+      <section className={styles.section} aria-labelledby="community">
+        <h3 className={styles.sectionTitle} id="community">👥 Topluluk</h3>
+        <div className={styles.statsGrid} role="list">
+          <StatCard value="1,247" label="Aktif Üye" />
+          <StatCard value="342" label="Paylaşılan Alpha" />
+          <StatCard value="89" label="Trade Ideas" />
+          <StatCard value="12.5%" label="Ort. APR (Funding)" />
         </div>
       </section>
 
