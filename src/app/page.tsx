@@ -58,10 +58,12 @@ export default function HomePage() {
     });
   }, []);
 
-  const applyThemeParams = (params: Record<string, string>) => {
+  const applyThemeParams = (params: any) => {
     const root = document.documentElement;
     Object.entries(params).forEach(([key, value]) => {
-      root.style.setProperty(`--tg-theme-${key.replace(/_/g, "-")}`, value);
+      if (typeof value === 'string') {
+        root.style.setProperty(`--tg-theme-${key.replace(/_/g, "-")}`, value);
+      }
     });
   };
 
