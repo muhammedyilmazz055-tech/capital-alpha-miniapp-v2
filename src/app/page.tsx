@@ -61,50 +61,52 @@ function useTelegramWebApp() {
 
   useEffect(() => {
     let mounted = true;
-    
-    import("@twa-dev/sdk")
-      .then((mod) => {
-        const WebApp = mod.default;
-        if (!mounted) return;
-        
-        setWebApp(WebApp as unknown as WebAppType);
-        setWebAppReady(true);
-        
-        if (WebApp.themeParams) {
-          const params: ThemeParams = WebApp.themeParams as unknown as ThemeParams;
-          setThemeParams(params);
-          applyThemeParams(params);
-        }
-        
-        const handleThemeChange = (params: ThemeParams) => {
-          applyThemeParams(params);
-          setThemeParams(params);
-        };
-        
-        WebApp.onEvent("themeChanged", handleThemeChange as any);
-        
-        WebApp.ready();
-        WebApp.expand();
-        
-        if (WebApp.setHeaderColor && WebApp.themeParams.bg_color) {
-          WebApp.setHeaderColor(WebApp.themeParams.bg_color);
-        }
-        if (WebApp.setBackgroundColor && WebApp.themeParams.bg_color) {
-          WebApp.setBackgroundColor(WebApp.themeParams.bg_color);
-        }
-        
-        if (WebApp.initDataUnsafe?.user) {
-          setUser(WebApp.initDataUnsafe.user);
-        }
-        setInitData(WebApp.initData);
-        
-        return () => {
-          WebApp.offEvent("themeChanged", handleThemeChange as any);
-        };
-      })
-      .catch(console.error);
-    
-    return () => { mounted = false; };
+
+    // Use native window.Telegram.WebApp directly (more reliable than @twa-dev/sdk)
+    const WebApp = (window as any).Telegram?.WebApp;
+
+    if (!WebApp) {
+      console.error("Telegram WebApp not available");
+      if (mounted) setWebAppReady(true); // Prevent infinite loading
+      return;
+    }
+
+    if (!mounted) return;
+
+    setWebApp(WebApp as unknown as WebAppType);
+    setWebAppReady(true);
+
+    if (WebApp.themeParams) {
+      const params: ThemeParams = WebApp.themeParams as unknown as ThemeParams;
+      setThemeParams(params);
+      applyThemeParams(params);
+    }
+
+    const handleThemeChange = (params: ThemeParams) => {
+      applyThemeParams(params);
+      setThemeParams(params);
+    };
+
+    WebApp.onEvent("themeChanged", handleThemeChange as any);
+
+    WebApp.ready();
+    WebApp.expand();
+
+    if (WebApp.setHeaderColor && WebApp.themeParams.bg_color) {
+      WebApp.setHeaderColor(WebApp.themeParams.bg_color);
+    }
+    if (WebApp.setBackgroundColor && WebApp.themeParams.bg_color) {
+      WebApp.setBackgroundColor(WebApp.themeParams.bg_color);
+    }
+
+    if (WebApp.initDataUnsafe?.user) {
+      setUser(WebApp.initDataUnsafe.user);
+    }
+    setInitData(WebApp.initData);
+
+    return () => {
+      WebApp.offEvent("themeChanged", handleThemeChange as any);
+    };
   }, []);
 
   return { webApp, webAppReady, themeParams, user, initData };
