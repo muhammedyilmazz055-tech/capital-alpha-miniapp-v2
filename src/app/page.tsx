@@ -75,56 +75,70 @@ function useTelegramWebApp() {
 
   useEffect(() => {
     let mounted = true;
+    let attempts = 0;
+    const maxAttempts = 20; // ~2 seconds total (100ms * 20)
 
-    // Use native window.Telegram.WebApp directly (more reliable than @twa-dev/sdk)
-    const WebApp = (window as any).Telegram?.WebApp;
+    const tryInit = () => {
+      if (!mounted) return;
 
-    if (!WebApp) {
-      console.error("Telegram WebApp not available");
-      if (mounted) setWebAppReady(true); // Prevent infinite loading
-      return;
-    }
+      const WebApp = (window as any).Telegram?.WebApp;
 
-    if (!mounted) return;
+      if (!WebApp) {
+        attempts++;
+        if (attempts < maxAttempts) {
+          setTimeout(tryInit, 100);
+          return;
+        }
+        console.error("Telegram WebApp not available after retries");
+        setWebAppReady(true); // Prevent infinite loading
+        return;
+      }
 
-    setWebApp(WebApp as unknown as WebAppType);
-    setWebAppReady(true);
+      setWebApp(WebApp as unknown as WebAppType);
+      setWebAppReady(true);
 
-    if (WebApp.themeParams) {
-      const params: ThemeParams = WebApp.themeParams as unknown as ThemeParams;
-      setThemeParams(params);
-      applyThemeParams(params);
-    }
+      if (WebApp.themeParams) {
+        const params: ThemeParams = WebApp.themeParams as unknown as ThemeParams;
+        setThemeParams(params);
+        applyThemeParams(params);
+      }
 
-    const handleThemeChange = (params: ThemeParams) => {
-      applyThemeParams(params);
-      setThemeParams(params);
+      const handleThemeChange = (params: ThemeParams) => {
+        applyThemeParams(params);
+        setThemeParams(params);
+      };
+
+      WebApp.onEvent("themeChanged", handleThemeChange as any);
+
+      WebApp.ready();
+      WebApp.expand();
+
+      if (WebApp.setHeaderColor && WebApp.themeParams.bg_color) {
+        WebApp.setHeaderColor(WebApp.themeParams.bg_color);
+      }
+      if (WebApp.setBackgroundColor && WebApp.themeParams.bg_color) {
+        WebApp.setBackgroundColor(WebApp.themeParams.bg_color);
+      }
+
+      // Try initDataUnsafe first, fallback to parsing initData
+      let userData = WebApp.initDataUnsafe?.user;
+      if (!userData) {
+        userData = parseUserFromInitData(WebApp.initData);
+      }
+      if (userData) {
+        setUser(userData);
+      }
+      setInitData(WebApp.initData);
     };
 
-    WebApp.onEvent("themeChanged", handleThemeChange as any);
-
-    WebApp.ready();
-    WebApp.expand();
-
-    if (WebApp.setHeaderColor && WebApp.themeParams.bg_color) {
-      WebApp.setHeaderColor(WebApp.themeParams.bg_color);
-    }
-    if (WebApp.setBackgroundColor && WebApp.themeParams.bg_color) {
-      WebApp.setBackgroundColor(WebApp.themeParams.bg_color);
-    }
-
-    // Try initDataUnsafe first, fallback to parsing initData
-    let userData = WebApp.initDataUnsafe?.user;
-    if (!userData) {
-      userData = parseUserFromInitData(WebApp.initData);
-    }
-    if (userData) {
-      setUser(userData);
-    }
-    setInitData(WebApp.initData);
+    tryInit();
 
     return () => {
-      WebApp.offEvent("themeChanged", handleThemeChange as any);
+      mounted = false;
+      const WebApp = (window as any).Telegram?.WebApp;
+      if (WebApp) {
+        // best-effort cleanup; handler ref not tracked across retries
+      }
     };
   }, []);
 
