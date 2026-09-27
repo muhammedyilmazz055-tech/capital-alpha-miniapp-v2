@@ -52,6 +52,20 @@ type VipStatus = "loading" | "active" | "inactive";
 
 const API_BASE = "";
 
+function parseUserFromInitData(initData: string | null): TelegramUser | null {
+  if (!initData) return null;
+  try {
+    const params = new URLSearchParams(initData);
+    const userParam = params.get("user");
+    if (userParam) {
+      return JSON.parse(decodeURIComponent(userParam));
+    }
+  } catch (e) {
+    console.warn("Failed to parse user from initData:", e);
+  }
+  return null;
+}
+
 function useTelegramWebApp() {
   const [webApp, setWebApp] = useState<WebAppType | null>(null);
   const [webAppReady, setWebAppReady] = useState(false);
@@ -99,8 +113,13 @@ function useTelegramWebApp() {
       WebApp.setBackgroundColor(WebApp.themeParams.bg_color);
     }
 
-    if (WebApp.initDataUnsafe?.user) {
-      setUser(WebApp.initDataUnsafe.user);
+    // Try initDataUnsafe first, fallback to parsing initData
+    let userData = WebApp.initDataUnsafe?.user;
+    if (!userData) {
+      userData = parseUserFromInitData(WebApp.initData);
+    }
+    if (userData) {
+      setUser(userData);
     }
     setInitData(WebApp.initData);
 
