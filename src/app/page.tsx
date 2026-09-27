@@ -144,10 +144,10 @@ function useVipStatus(initData: string | null, webAppReady: boolean) {
   const [vipStatus, setVipStatus] = useState<VipStatus>("loading");
 
   useEffect(() => {
-    if (!initData || !webAppReady) return;
+    if (!initData || initData === "" || !webAppReady) return;
     
     let mounted = true;
-    
+
     async function check() {
       try {
         const res = await fetch(`${API_BASE}/api/vip/status`, {
@@ -161,7 +161,7 @@ function useVipStatus(initData: string | null, webAppReady: boolean) {
         if (mounted) setVipStatus("inactive");
       }
     }
-    
+
     check();
     return () => { mounted = false; };
   }, [initData, webAppReady]);
